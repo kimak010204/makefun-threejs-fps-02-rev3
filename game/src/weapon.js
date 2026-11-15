@@ -113,6 +113,34 @@ export function createWeapon(camera, audio, look = {}) {
   flash.scale.set(0.44, 0.44, 1);
   flash.visible = false;
   camera.add(flash);
+  // Inti flash: bola putih-kuning pekat di tengah starburst — lapisan kedua
+  // yang membuat tembakan terbaca sebagai ledakan kecil, bukan sekadar sprite.
+  const coreCanvas = document.createElement('canvas');
+  coreCanvas.width = 64;
+  coreCanvas.height = 64;
+  {
+    const ctx = coreCanvas.getContext('2d');
+    const grad = ctx.createRadialGradient(32, 32, 1, 32, 32, 30);
+    grad.addColorStop(0, 'rgba(255, 252, 235, 1)');
+    grad.addColorStop(0.4, 'rgba(255, 224, 150, 0.95)');
+    grad.addColorStop(0.75, 'rgba(255, 170, 60, 0.5)');
+    grad.addColorStop(1, 'rgba(255, 150, 40, 0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(32, 32, 30, 0, 7);
+    ctx.fill();
+  }
+  const flashCore = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: new THREE.CanvasTexture(coreCanvas), transparent: true, opacity: 1,
+    depthWrite: false, blending: THREE.AdditiveBlending,
+  }));
+  flashCore.position.set(0.24, -0.16, -0.95);
+  flashCore.scale.set(0.26, 0.26, 1);
+  flashCore.visible = false;
+  camera.add(flashCore);
+  // Skala flash per senjata: DMR/shotgun paling besar, pistol/SMG kecil.
+  // Dijaga tetap ringkas supaya tidak menutupi bidikan (flash v3 0,44 pas).
+  const FLASH_SCALE = { pistol: 0.36, smg: 0.4, rifle: 0.46, shotgun: 0.58, dmr: 0.52 };
   const flashLight = new THREE.PointLight(new THREE.Color(PALETTE.accent), 0, 6);
   flashLight.position.set(0.24, -0.16, -0.6);
   camera.add(flashLight);
@@ -212,11 +240,17 @@ export function createWeapon(camera, audio, look = {}) {
     util.group.position.z = -0.4 + state.kick;
     util.group.rotation.x = state.kick * 2;
     const muzzleZ = (look.muzzle && look.muzzle[state.current]) || -0.95;
+    const fScale = FLASH_SCALE[state.current] || 0.44;
     flash.position.z = muzzleZ;
+    flash.scale.set(fScale, fScale, 1);
+    flashCore.position.z = muzzleZ;
+    flashCore.scale.set(fScale * 0.45, fScale * 0.45, 1);
     flashLight.position.z = muzzleZ + 0.35;
     flash.visible = state.flash > 0;
     flash.material.opacity = state.flash > 0 ? 0.9 : 0;
-    flashLight.intensity = state.flash > 0 ? 12 : 0;
+    flashCore.visible = state.flash > 0;
+    flashCore.material.opacity = state.flash > 0 ? 1 : 0;
+    flashLight.intensity = state.flash > 0 ? 15 : 0;
     if (state.reloadLeft > 0) {
       state.reloadLeft = Math.max(0, state.reloadLeft - dt);
       model.rotation.x = -0.55 * Math.min(1, (def.reload - state.reloadLeft) * 2);

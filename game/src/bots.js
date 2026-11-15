@@ -59,7 +59,7 @@ function buildBotMesh(team) {
   const gun = add(new THREE.BoxGeometry(0.07, 0.09, 0.62), dark, 0.2, 1.18, -0.28);
   gun.rotation.x = 0.06;
   add(new THREE.BoxGeometry(0.34, 0.06, 0.06), glow, 0, 1.52, 0);
-  return { group, torso, head };
+  return { group, torso, head, suitMat: suit, glowMat: glow };
 }
 
 export function createBots(scene, world, effects, audio, hooks) {
@@ -86,12 +86,13 @@ export function createBots(scene, world, effects, audio, hooks) {
   }
 
   function makeBot(team, index, random) {
-    const { group, torso, head } = buildBotMesh(team);
+    const { group, torso, head, suitMat, glowMat } = buildBotMesh(team);
+    hooks.dressBot?.(group, team);
     scene.add(group);
     const bot = {
       id: `${team}-${index}`,
       name: CALLSIGNS[team][index],
-      team, group, torso, head,
+      team, group, torso, head, suitMat, glowMat,
       pos: new THREE.Vector3(),
       yaw: 0, health: 100, alive: true, fall: 0,
       state: 'patrol', role: team === 'attack' ? 'support' : 'anchor',
@@ -393,7 +394,7 @@ export function createBots(scene, world, effects, audio, hooks) {
   function damageBot(bot, amount, attacker, random) {
     if (!bot.alive) return;
     bot.health -= amount;
-    bot.flash = 0.12;
+    bot.flash = 0.16;
     if (attacker && attacker.kind === 'player') {
       bot.lastSeen.copy(hooks.playerPos());
       bot.lastSeenAt = now;
@@ -525,7 +526,23 @@ export function createBots(scene, world, effects, audio, hooks) {
       return;
     }
     bot.flash = Math.max(0, bot.flash - dt);
-    bot.torso.material.emissive.setHex(bot.flash > 0 ? 0x881111 : 0x000000);
+    // Flash kena tembak: suit (torso+kepala+lengan) menyala merah-putih terang
+    // + strip glow tim ikut menyala — bukan cuma torso merah redup seperti dulu.
+    // Flinch: badan tersentak miring sebentar seiring flash memudar.
+    if (bot.flash > 0) {
+      const k = bot.flash / 0.16;
+      bot.suitMat.emissive.setHex(0xff2e2e);
+      bot.suitMat.emissiveIntensity = 0.6 + k * 1.4;
+      bot.glowMat.emissiveIntensity = 0.35 + k * 1.6;
+      bot.group.rotation.x = -0.09 * k;
+      bot.group.rotation.z = 0.06 * k;
+    } else {
+      bot.suitMat.emissive.setHex(0x000000);
+      bot.suitMat.emissiveIntensity = 1;
+      bot.glowMat.emissiveIntensity = 0.35;
+      bot.group.rotation.x = 0;
+      bot.group.rotation.z = 0;
+    }
 
     const blinded = now < bot.blindUntil;
 

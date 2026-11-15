@@ -6,7 +6,7 @@ const SPARK_SETS = 10;
 const SPARKS_EACH = 14;
 const PUFFS = 8;
 const CASINGS = 12;
-const TRACER_LIFE = 0.3;
+const TRACER_LIFE = 0.5;
 const SPARK_LIFE = 0.35;
 
 function softTexture(inner, mid) {
@@ -28,15 +28,18 @@ export function createEffects(scene) {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
     const line = new THREE.Line(geo, new THREE.LineBasicMaterial({
-      color: 0xffd9a0, transparent: true, opacity: 0, depthWrite: false,
+      color: 0xffe9b8, transparent: true, opacity: 0, depthWrite: false,
     }));
     line.visible = false;
     line.frustumCulled = false;
     scene.add(line);
+    // Beam 3D: tipis dan mulai 1 m di depan moncong — beam yang mulai tepat
+    // di kamera terlihat sebagai piramida putih besar (foreshortening),
+    // bukan sebagai jejak peluru. Garis 1px tetap jadi tulang tracer.
     const beam = new THREE.Mesh(
-      new THREE.BoxGeometry(0.035, 0.035, 1),
+      new THREE.BoxGeometry(0.03, 0.03, 1),
       new THREE.MeshBasicMaterial({
-        color: 0xffe0b0, transparent: true, opacity: 0,
+        color: 0xffe9b8, transparent: true, opacity: 0,
         blending: THREE.AdditiveBlending, depthWrite: false,
       }),
     );
@@ -100,12 +103,43 @@ export function createEffects(scene) {
     pos.needsUpdate = true;
     slot.line.visible = true;
     slot.life = TRACER_LIFE;
-    slot.line.material.opacity = 0.85;
-    slot.beam.position.copy(from).add(to).multiplyScalar(0.5);
+    slot.line.material.opacity = 1;
+    // Beam mulai 1 m di depan moncong (bukan di moncong) supaya tidak jadi
+    // piramida putih saat kamera memandang searah tembakan.
+    const dir = to.clone().sub(from);
+    const len = dir.length();
+    const start = from.clone().addScaledVector(dir.clone().normalize(), Math.min(1, len * 0.2));
+    const mid = start.clone().add(to).multiplyScalar(0.5);
+    slot.beam.position.copy(mid);
     slot.beam.lookAt(to);
-    slot.beam.scale.set(1, 1, from.distanceTo(to));
+    slot.beam.scale.set(1, 1, start.distanceTo(to));
     slot.beam.visible = true;
-    slot.beam.material.opacity = 0.9;
+    slot.beam.material.opacity = 0.85;
+  }
+
+  // Kilau benturan: sprite aditif terang sesaat di titik kena + percikan +
+  // debu — dipakai saat peluru mengenai dinding/lantai (bukan bot).
+  const impactTexture = softTexture('rgba(255, 240, 200, 0.95)', 'rgba(255, 190, 90, 0.45)');
+  const impactSlots = Array.from({ length: 6 }, () => {
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: impactTexture, transparent: true, opacity: 0, depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }));
+    sprite.visible = false;
+    scene.add(sprite);
+    return { sprite, life: 0 };
+  });
+  let impactCursor = 0;
+  function impact(point) {
+    const slot = impactSlots[impactCursor];
+    impactCursor = (impactCursor + 1) % impactSlots.length;
+    slot.sprite.position.copy(point);
+    slot.sprite.scale.set(0.7, 0.7, 1);
+    slot.sprite.visible = true;
+    slot.life = 0.18;
+    slot.sprite.material.opacity = 0.95;
+    burst(point, 0xffd9a0, 2.2);
+    puff(point, 0.5, 0.6);
   }
 
   function burst(point, color = 0xffc46b, speed = 3.2) {
@@ -166,8 +200,8 @@ export function createEffects(scene) {
       if (slot.life <= 0) continue;
       slot.life -= dt;
       const k = Math.max(0, slot.life / TRACER_LIFE);
-      slot.line.material.opacity = k * 0.85;
-      slot.beam.material.opacity = k * 0.9;
+      slot.line.material.opacity = k;
+      slot.beam.material.opacity = k * 0.85;
       if (slot.life <= 0) { slot.line.visible = false; slot.beam.visible = false; }
     }
     for (const slot of sparkSlots) {
@@ -209,6 +243,15 @@ export function createEffects(scene) {
       }
       if (slot.life <= 0) slot.mesh.visible = false;
     }
+    for (const slot of impactSlots) {
+      if (slot.life <= 0) continue;
+      slot.life -= dt;
+      const k = Math.max(0, slot.life / 0.18);
+      slot.sprite.material.opacity = k * 0.95;
+      const s = 0.7 + (1 - k) * 0.5;
+      slot.sprite.scale.set(s, s, 1);
+      if (slot.life <= 0) slot.sprite.visible = false;
+    }
     if (fireLife > 0) {
       fireLife -= dt;
       const age = 1 - Math.max(0, fireLife / 0.45);
@@ -223,5 +266,5 @@ export function createEffects(scene) {
     }
   }
 
-  return { tracer, burst, puff, eject, explosion, step, tmp: new THREE.Vector3() };
+  return { tracer, burst, puff, eject, explosion, impact, step, tmp: new THREE.Vector3() };
 }

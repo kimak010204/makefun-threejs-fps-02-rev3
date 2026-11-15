@@ -22,6 +22,7 @@ import { createLife } from './life.js';
 import { createMarks } from './marks.js';
 import { dressV2 } from './v2.js';
 import { dressV3 } from './v3.js';
+import { dressV4 } from './v4.js';
 
 const STEP = 1 / 60; // fixed simulation step
 const PLANT_TIME = 3.5; // seconds of holding E inside a site
@@ -87,6 +88,7 @@ const life = createLife(scene);
 const marks = createMarks(scene);
 dressV2(scene);
 dressV3(scene);
+dressV4(scene);
 const hud = createHud(document);
 const scoreboard = hud.scoreboard;
 const minimap = hud.minimap;
@@ -538,9 +540,11 @@ function shoot() {
         if (bot.health <= 0) killed = true;
         hud.damageNumber(camera, hit.point, dmg, headshot);
         if (bot.health > 0) audio.hit();
-        effects.burst(hit.point, 0xff5a3c, 2.4);
+        effects.burst(hit.point, 0xff5a3c, 3.6);
+        effects.burst(hit.point, 0xffd9a0, 2.4);
+        effects.puff(hit.point, 0.55, 0.5);
       } else {
-        effects.burst(hit.point, 0xffd9a0, 1.6);
+        effects.impact(hit.point);
         if (hit.face) {
           marks.add(hit.point, new THREE.Vector3().copy(hit.face.normal).transformDirection(hit.object.matrixWorld));
         }
@@ -850,7 +854,18 @@ function runShot(name) {
       shoot();
       settle(8);
     }
-    settle(10);
+    // Tembakan ke-4 ke bot flank yang masih hidup: flash kena + flinch-nya
+    // tertangkap segar di screenshot (settle pendek, 2 langkah saja).
+    if (flank && flank.alive) {
+      aimAt(new THREE.Vector3(flank.pos.x, 1.15, flank.pos.z));
+      shoot();
+      settle(2);
+      // Bidik kembali ke tengah antara musuh yang jatuh dan flank yang kena,
+      // supaya keduanya masuk frame (kamera tidak tertinggal menghadap flank).
+      aimAt(new THREE.Vector3(-2, 1.2, 3.5));
+    } else {
+      settle(10);
+    }
     weapon.state.flash = 0.12;
     settle(1);
   } else if (name === 'buy') {

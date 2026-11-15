@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 
 const NUMBER_POOL = 10;
-const NUMBER_LIFE = 0.75;
+const NUMBER_LIFE = 0.9;
 
 export function createDamageFx(container, arcEl) {
   const numbers = [];
@@ -51,7 +51,7 @@ export function createDamageFx(container, arcEl) {
         }
         const age = 1 - slot.life / NUMBER_LIFE;
         slot.el.style.left = `${slot.x}px`;
-        slot.el.style.top = `${slot.y - age * 46}px`;
+        slot.el.style.top = `${slot.y - age * 56}px`;
         slot.el.style.opacity = String(1 - age);
       }
     },

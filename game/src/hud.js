@@ -128,11 +128,14 @@ export function createHud(doc) {
       window.setTimeout(() => line.remove(), 9000);
     },
     banner(title, sub = '', ms = 2600) {
+      const bannerEl = el('banner');
       el('banner-title').textContent = title;
       el('banner-sub').textContent = sub;
-      el('banner').hidden = false;
+      bannerEl.classList.toggle('win-van', title.indexOf('VANGUARD') !== -1);
+      bannerEl.classList.toggle('win-emb', title.indexOf('EMBER') !== -1);
+      bannerEl.hidden = false;
       window.clearTimeout(bannerTimer);
-      bannerTimer = window.setTimeout(() => { el('banner').hidden = true; }, ms);
+      bannerTimer = window.setTimeout(() => { bannerEl.hidden = true; }, ms);
     },
     hint(text, ms = 3000) {
       const node = el('hint');
