@@ -5,6 +5,9 @@ export function createInput(canvas, onLockChange) {
   const state = { keys: held, pressed: edges, locked: false, firing: false, aiming: false, lookX: 0, lookY: 0 };
 
   function setKey(event, down) {
+    // Typing in a text field (chat box, settings) must never drive the game.
+    const tag = event.target && event.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
     if (event.code === 'Space' || event.code === 'Tab') event.preventDefault();
     if (down && !held.has(event.code)) edges.add(event.code);
     if (down) held.add(event.code);

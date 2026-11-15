@@ -12,6 +12,7 @@ import { createRounds } from './rounds.js';
 import { createEffects } from './effects.js';
 import { createAudio } from './audio.js';
 import { createHud } from './hud.js';
+import { createChat } from './chat.js';
 import { createAmbient } from './ambient.js';
 import { createInput } from './input.js';
 import { buildSkin } from './skin.js';
@@ -92,6 +93,22 @@ dressV4(scene);
 const hud = createHud(document);
 const scoreboard = hud.scoreboard;
 const minimap = hud.minimap;
+const chat = createChat(document, { team: 'attack' });
+// Bot chat lines (short, in-character). Team lines only reach their own team;
+// All lines reach everyone. Kept rare so the log never floods.
+const CHAT_KILL_ALL = ['Nice shot!', 'Got one!', 'One down — push now!', 'Clean pick.'];
+const CHAT_KILL_TEAM = ['One down, keep pushing.', 'Nice, that was mine.', 'Site is open, go!'];
+const CHAT_TAUNT_ALL = ['Is that all you got?', 'You will not hold this yard.', 'Come find me.'];
+const CHAT_PLANT_TEAM = ['Spike is down — hold the site!', 'Plant is set, cover me!'];
+const CHAT_DEFUSE_TEAM = ['Spike defused — nice hold!', 'Wires cut, round is ours.'];
+function botChat(bot, scope, lines) {
+  if (!bot || !lines.length) return;
+  chat.receive(bot.name, bot.team, lines[Math.floor(rng() * lines.length)], scope);
+}
+function randomBot(team) {
+  const pool = bots.bots.filter((b) => b.team === team);
+  return pool.length ? pool[Math.floor(rng() * pool.length)] : null;
+}
 const ambient = createAmbient(scene, world.anchors);
 const player = createPlayer(world.colliders);
 const weapon = createWeapon(camera, audio, { buildGun, muzzle: GUN_MUZZLE });
@@ -184,13 +201,22 @@ const rounds = createRounds({
       2200,
     );
     hud.closeBuy();
+    // Squad leader drops the plan in team chat so the player sees it twice
+    // (radio log + chat). Enemy never sees team chat.
+    const lead = bots.bots.find((b) => b.name === 'DUST');
+    if (lead && plans.attack) chat.receive('DUST', 'attack', `Plan: ${plans.attack.name} — ${plans.attack.line}`, 'team');
   },
   onLiveStart() {
     hud.banner('GO', 'Eliminate EMBER or plant the spike', 1200);
   },
   onRoundEnd(winner, reason) {
     const attackersWon = winner === 'attack';
-    hud.banner(attackersWon ? 'VANGUARD WINS THE ROUND' : 'EMBER WINS THE ROUND', reason, 3200);
+    hud.banner(
+      attackersWon ? 'VANGUARD WINS THE ROUND' : 'EMBER WINS THE ROUND',
+      reason,
+      3200,
+      hud.roundEndDetails(scoreboard.table(), rounds.state.wins),
+    );
     if (attackersWon) audio.roundWin();
     else audio.roundLose();
     hud.setScore(rounds.state.wins.attack, rounds.state.wins.defend);
@@ -216,6 +242,7 @@ const rounds = createRounds({
     hud.banner('SPIKE PLANTED', `Defend site ${site} until it blows`, 3000);
     hud.feed(`Spike planted at ${site} (+$300)`, true);
     scoreboard.recordPlant('YOU');
+    chat.receive('YOU', 'attack', CHAT_PLANT_TEAM[Math.floor(rng() * CHAT_PLANT_TEAM.length)], 'team');
     audio.plantStart();
     hearing.emit(plantedPos().x, plantedPos().z, 'plant');
     bots.hearShot(plantedPos(), 60);
@@ -267,6 +294,11 @@ const bots = createBots(scene, world, effects, audio, {
     const killer = attacker && attacker.kind === 'player' ? YOU : attacker;
     const firstBlood = scoreboard.recordKill(killer, bot);
     hud.feed(`${killer ? killer.name : 'EMBER'} ▸ ${bot.name}`, killer === YOU);
+    if (killer && killer !== YOU && killer.team) {
+      // Killer bot talks: mostly All chat (everyone sees it), sometimes Team.
+      if (rng() < 0.25) botChat(killer, 'all', CHAT_KILL_ALL);
+      else if (rng() < 0.2) botChat(killer, 'team', CHAT_KILL_TEAM);
+    }
     if (killer === YOU) {
       match.kills += 1;
       match.streak += 1;
@@ -285,6 +317,7 @@ const bots = createBots(scene, world, effects, audio, {
   onDefused(bot) {
     hud.banner('SPIKE DEFUSED', `${bot.name} cut the wires`, 3000);
     scoreboard.recordDefuse(bot.name);
+    botChat(bot, 'all', CHAT_DEFUSE_TEAM);
     rounds.endRound('defend', 'Spike defused');
   },
 });
@@ -603,6 +636,16 @@ function step(dt) {
   const pressed = input.takePressed();
   const phase = rounds.state.phase;
 
+  // Chat: T = All chat, Y = Team chat. Opening chat drops pointer lock (the
+  // input listener clears held keys), and while the box is open every game
+  // key is swallowed so typing never moves, reloads or buys.
+  if (!chat.isOpen() && pressed.has('KeyT')) {
+    if (chat.open('all') && document.pointerLockElement) document.exitPointerLock();
+  } else if (!chat.isOpen() && pressed.has('KeyY')) {
+    if (chat.open('team') && document.pointerLockElement) document.exitPointerLock();
+  }
+  if (chat.isOpen()) pressed.clear();
+
   if (pressed.has('KeyB')) {
     if (match.buyOpen) closeBuy();
     else openBuy();
@@ -866,6 +909,9 @@ function runShot(name) {
     } else {
       settle(10);
     }
+    // One enemy All-chat line so the 1-play screenshot shows the chat box
+    // with both scopes (DUST's team plan line already fired on round start).
+    chat.receive('ASH', 'defend', 'They are pushing A!', 'all');
     weapon.state.flash = 0.12;
     settle(1);
   } else if (name === 'buy') {
@@ -892,7 +938,17 @@ function runShot(name) {
     enemy.group.rotation.x = -1.45;
     enemy.group.position.y = -0.12;
     aimAt(new THREE.Vector3(-15, 1.2, -11));
-    hud.banner('VANGUARD WINS THE ROUND', 'Spike detonated', 60000);
+    // Stage a finished round on the scoreboard so the banner's team sheet
+    // shows real K/D lines instead of a 0/0 roster.
+    const byName = (n) => bots.bots.find((b) => b.name === n);
+    scoreboard.recordKill(YOU, byName('ASH'), 140);
+    scoreboard.recordKill(YOU, byName('COAL'), 100);
+    scoreboard.recordKill(byName('DUST'), byName('SLAG'), 120);
+    scoreboard.recordKill(byName('RIVET'), byName('CINDER'), 100);
+    scoreboard.recordKill(byName('SOOT'), byName('FUSE'), 110);
+    scoreboard.recordKill(byName('BOLT'), byName('SOOT'), 100);
+    hud.banner('VANGUARD WINS THE ROUND', 'Spike detonated', 60000,
+      hud.roundEndDetails(scoreboard.table(), rounds.state.wins));
     hud.setScore(4, 2);
   }
   hud.setAmmo(weapon.ammo[weapon.state.current].mag, weapon.ammo[weapon.state.current].reserve,

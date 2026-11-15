@@ -127,15 +127,33 @@ export function createHud(doc) {
       while (radioLog.children.length > 5) radioLog.firstChild.remove();
       window.setTimeout(() => line.remove(), 9000);
     },
-    banner(title, sub = '', ms = 2600) {
+    banner(title, sub = '', ms = 2600, detailsHtml = '') {
       const bannerEl = el('banner');
       el('banner-title').textContent = title;
       el('banner-sub').textContent = sub;
+      el('banner-details').innerHTML = detailsHtml || '';
       bannerEl.classList.toggle('win-van', title.indexOf('VANGUARD') !== -1);
       bannerEl.classList.toggle('win-emb', title.indexOf('EMBER') !== -1);
       bannerEl.hidden = false;
       window.clearTimeout(bannerTimer);
       bannerTimer = window.setTimeout(() => { bannerEl.hidden = true; }, ms);
+    },
+    // Round-end team sheet: score line + both rosters (name + K/D), winner's
+    // team first. rows come from scoreboard.table(): {name, team, kills, deaths}.
+    roundEndDetails(rows, wins) {
+      const byTeam = { attack: [], defend: [] };
+      for (const r of rows) (byTeam[r.team] || byTeam.attack).push(r);
+      const col = (team, label) => {
+        const list = byTeam[team];
+        if (!list.length) return '';
+        const items = list.map((r) => `<li><span>${r.name}</span><span class="kd"><b>${r.kills}</b> / ${r.deaths}</span></li>`).join('');
+        return `<div class="banner-team ${team === 'attack' ? 'van' : 'emb'}"><h4>${label}</h4><ul>${items}</ul></div>`;
+      };
+      const first = wins.attack >= wins.defend ? 'attack' : 'defend';
+      const second = first === 'attack' ? 'defend' : 'attack';
+      const label = (t) => (t === 'attack' ? 'VANGUARD' : 'EMBER');
+      return `<div class="banner-score"><span class="van">VANGUARD ${wins.attack}</span> — <span class="emb">${wins.defend} EMBER</span></div>` +
+        `<div class="banner-teams">${col(first, label(first))}${col(second, label(second))}</div>`;
     },
     hint(text, ms = 3000) {
       const node = el('hint');
