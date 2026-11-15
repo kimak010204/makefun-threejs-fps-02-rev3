@@ -111,6 +111,31 @@
   #banner.win-van #banner-title { color: var(--vanguard); }
   #banner.win-emb { border-top-color: var(--ember); }
   #banner.win-emb #banner-title { color: var(--ember); }
+  #banner-details { margin-top: 14px; text-align: left; font-family: var(--font-readout); }
+  #banner-details:empty { display: none; }
+  .banner-score { text-align: center; font-size: 17px; font-weight: 700; letter-spacing: 2px; color: var(--ink); margin-bottom: 10px; text-shadow: 0 2px 0 #000, 0 3px 10px rgba(0,0,0,.95); }
+  .banner-score .van { color: var(--vanguard); }
+  .banner-score .emb { color: var(--ember); }
+  .banner-teams { display: flex; gap: 28px; justify-content: center; }
+  .banner-team { min-width: 190px; }
+  .banner-team h4 { margin: 0 0 6px; font-size: 13px; letter-spacing: 3px; }
+  .banner-team.van h4 { color: var(--vanguard); }
+  .banner-team.emb h4 { color: var(--ember); }
+  .banner-team ul { margin: 0; padding: 0; list-style: none; }
+  .banner-team li { display: flex; justify-content: space-between; gap: 14px; font-size: 15px; line-height: 1.5; color: var(--ink); text-shadow: 0 1px 0 #000, 0 2px 8px rgba(0,0,0,.95); }
+  .banner-team li .kd { color: var(--muted); font-weight: 700; white-space: nowrap; }
+  .banner-team li .kd b { color: var(--ink); }
+  #chat-log { position: absolute; left: 16px; bottom: 148px; width: 340px; display: flex; flex-direction: column; gap: 3px; font-family: var(--font-readout); font-size: 13px; line-height: 1.4; }
+  .chat-line { background: rgba(16, 18, 24, .72); border-left: 2px solid var(--vanguard); padding: 4px 8px; color: var(--ink); text-shadow: 0 1px 2px #000; }
+  .chat-line.ember { border-left-color: var(--ember); }
+  .chat-line .who { font-weight: 700; }
+  .chat-line.van .who { color: var(--vanguard); }
+  .chat-line.ember .who { color: var(--ember); }
+  .chat-line .tag { font-size: 10px; letter-spacing: 1px; color: var(--muted); margin-left: 4px; }
+  #chat-input-row { position: absolute; left: 16px; bottom: 112px; width: 340px; display: flex; align-items: center; gap: 8px; background: rgba(8, 10, 14, .92); border: 1px solid var(--accent); padding: 6px 10px; pointer-events: auto; font-family: var(--font-readout); }
+  #chat-input-row[hidden] { display: none; }
+  #chat-mode { font-size: 12px; font-weight: 700; letter-spacing: 2px; color: var(--accent); white-space: nowrap; }
+  #chat-input { flex: 1; min-width: 0; background: transparent; border: none; outline: none; color: var(--ink); font-family: var(--font-readout); font-size: 13px; }
   #hint { position: absolute; bottom: 108px; left: 50%; transform: translateX(-50%); font-family: var(--font-readout); font-size: 14px; letter-spacing: 1px; background: rgba(16, 18, 24, .72); border: 1px solid var(--hairline); padding: 7px 14px; }
   #spectate-bar { position: absolute; bottom: 148px; left: 50%; transform: translateX(-50%); font-family: var(--font-readout); font-size: 13px; letter-spacing: 1px; background: rgba(16, 18, 24, .8); border: 1px solid var(--vanguard); padding: 7px 14px; color: var(--vanguard); }
   #plant-bar { position: absolute; bottom: 148px; left: 50%; transform: translateX(-50%); width: 300px; text-align: center; }
@@ -205,7 +230,11 @@
   <div id="banner" hidden>
     <div id="banner-title"></div>
     <div id="banner-sub"></div>
+    <div id="banner-details"></div>
   </div>
+
+  <div id="chat-log"></div>
+  <div id="chat-input-row" hidden><span id="chat-mode">ALL</span><input id="chat-input" type="text" maxlength="120" autocomplete="off" placeholder="Type a message…"></div>
 
   <div id="hint" hidden></div>
   <div id="spectate-bar" hidden>SPECTATING <span id="spectate-name">—</span> · CLICK TO CYCLE</div>
