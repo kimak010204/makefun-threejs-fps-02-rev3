@@ -23,51 +23,6 @@ function makeCanvas(w, h, draw) {
   return tex;
 }
 
-function groundTexture() {
-  return makeCanvas(1024, 832, (ctx, w, h) => {
-    ctx.fillStyle = '#333845';
-    ctx.fillRect(0, 0, w, h);
-    for (let i = 0; i < 3000; i += 1) {
-      ctx.fillStyle = Math.random() < 0.5 ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.05)';
-      ctx.fillRect(Math.random() * w, Math.random() * h, 2 + Math.random() * 3, 2 + Math.random() * 3);
-    }
-    for (let i = 0; i < 18; i += 1) {
-      const x = Math.random() * w;
-      const y = Math.random() * h;
-      const r = 18 + Math.random() * 55;
-      const grad = ctx.createRadialGradient(x, y, 2, x, y, r);
-      grad.addColorStop(0, 'rgba(12,12,16,0.5)');
-      grad.addColorStop(1, 'rgba(12,12,16,0)');
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.strokeStyle = 'rgba(10,10,14,0.35)';
-    ctx.lineWidth = 7;
-    for (const x of [150, 300, 700, 870, 500]) {
-      ctx.beginPath();
-      ctx.moveTo(x, 20);
-      ctx.lineTo(x + (Math.random() * 20 - 10), h - 20);
-      ctx.stroke();
-    }
-    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
-    ctx.lineWidth = 1.5;
-    for (let i = 0; i < 22; i += 1) {
-      let x = Math.random() * w;
-      let y = Math.random() * h;
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      for (let s = 0; s < 5; s += 1) {
-        x += Math.random() * 36 - 18;
-        y += Math.random() * 36 - 18;
-        ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-    }
-  });
-}
-
 function signTexture(text, color, w, h, fontPx, sub) {
   return makeCanvas(w, h, (ctx) => {
     ctx.fillStyle = '#14161c';
@@ -88,28 +43,17 @@ function signTexture(text, color, w, h, fontPx, sub) {
   });
 }
 
-function skyTexture() {
-  return makeCanvas(16, 512, (ctx, w, h) => {
-    const grad = ctx.createLinearGradient(0, 0, 0, h);
-    grad.addColorStop(0, '#1a2233');
-    grad.addColorStop(0.45, '#3a3a4e');
-    grad.addColorStop(0.68, '#8a5a3c');
-    grad.addColorStop(0.8, '#d98a3d');
-    grad.addColorStop(1, '#2b3140');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, w, h);
-  });
-}
-
-export function createWorld(scene) {
+export function createWorld(scene, opts = {}) {
+  const skin = opts.skin || null;
   const group = new THREE.Group();
   scene.add(group);
   const colliders = [];
   const shootables = [];
 
-  function solidBox(w, h, d, x, y, z, material, collide = true) {
+  function solidBox(w, h, d, x, y, z, material, collide = true, ry = 0) {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
     mesh.position.set(x, y, z);
+    if (ry) mesh.rotation.y = ry;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     group.add(mesh);
@@ -140,19 +84,19 @@ export function createWorld(scene) {
     return mesh;
   }
 
-  const groundMat = new THREE.MeshStandardMaterial({ map: groundTexture(), roughness: 0.96, metalness: 0.02 });
-  const wallMat = paint('wall', PALETTE.surface, 0.95, 0.04);
-  const wallDark = paint('wallDark', '#22262f', 0.95, 0.04);
-  const steelMat = paint('steel', PALETTE.hairline, 0.6, 0.45);
-  const rustMat = paint('rust', PALETTE.rust, 0.85, 0.25);
-  const tealMat = paint('teal', PALETTE.teal, 0.85, 0.2);
-  const crateMat = paint('crate', '#6b5a41', 0.9, 0.08);
-  const yellowMat = paint('yellow', '#c9971f', 0.7, 0.3);
-  const darkMat = paint('dark', '#17191f', 0.9, 0.1);
-  const sandMat = paint('sand', '#7a6a4e', 0.95, 0.02);
-  const tyreMat = paint('tyre', '#15161a', 0.9, 0.05);
+  const groundMat = skin.asphalt;
+  const wallMat = skin.concrete;
+  const wallDark = skin.concreteDark;
+  const steelMat = skin.steel;
+  const rustMat = skin.rust;
+  const tealMat = skin.corrugated;
+  const crateMat = skin.wood;
+  const yellowMat = skin.yellowPaint;
+  const darkMat = skin.darkMetal;
+  const sandMat = skin.sand;
+  const tyreMat = skin.rubber;
 
-  scene.background = skyTexture();
+  scene.background = skin.sky;
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(46, 38), groundMat);
   floor.rotation.x = -Math.PI / 2;
   floor.position.set(0, 0, 0);
@@ -368,13 +312,13 @@ export function createWorld(scene) {
   group.add(sun);
 
   scene.fog = new THREE.Fog(new THREE.Color(PALETTE.canvas), 26, 70);
-  const sky = new THREE.HemisphereLight(new THREE.Color('#8b9bb5'), new THREE.Color('#3a2f22'), 1.5);
+  const sky = new THREE.HemisphereLight(new THREE.Color('#8b9bb5'), new THREE.Color('#3a2f22'), 1.25);
   scene.add(sky);
-  const key = new THREE.DirectionalLight(new THREE.Color('#ffc27a'), 3.2);
-  key.position.set(-26, 16, 6);
+  const key = new THREE.DirectionalLight(new THREE.Color('#ffc27a'), 3.4);
+  key.position.set(-30, 10, 4);
   key.target.position.set(4, 0, -4);
   key.castShadow = true;
-  key.shadow.mapSize.set(2048, 2048);
+  key.shadow.mapSize.set(4096, 4096);
   key.shadow.camera.left = -30;
   key.shadow.camera.right = 30;
   key.shadow.camera.top = 30;
@@ -394,6 +338,13 @@ export function createWorld(scene) {
   const craneLamp = new THREE.PointLight(new THREE.Color('#ffc27a'), 14, 16, 1.8);
   craneLamp.position.set(-15, 4, -11);
   scene.add(craneLamp);
+
+  if (opts.dressYard) {
+    opts.dressYard({
+      group, colliders, shootables, skin,
+      box: solidBox, cyl: solidCylinder, flat: groundPlane,
+    });
+  }
 
   return {
     colliders,

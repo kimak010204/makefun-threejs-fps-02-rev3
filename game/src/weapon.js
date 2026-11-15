@@ -35,54 +35,6 @@ export const ARMOR_PRICE = 650;
 export const ARMOR_MAX = 50;
 export const ARMOR_SOAK = 0.5; // half of every hit goes into the vest
 
-function buildViewModel(def) {
-  const gripMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(PALETTE.hairline), roughness: 0.7, metalness: 0.2 });
-  const bodyMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(PALETTE.ink), roughness: 0.5, metalness: 0.35 });
-  const darkMat = new THREE.MeshStandardMaterial({ color: new THREE.Color('#14161a'), roughness: 0.55, metalness: 0.4 });
-  const brassMat = new THREE.MeshStandardMaterial({ color: new THREE.Color('#c9971f'), roughness: 0.35, metalness: 0.7 });
-  const group = new THREE.Group();
-  const box = (w, h, d, x, y, z, m) => {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
-    mesh.position.set(x, y, z);
-    group.add(mesh);
-    return mesh;
-  };
-  if (def.id === 'pistol') {
-    box(0.06, 0.09, 0.26, 0, 0, -0.1, bodyMat);
-    box(0.05, 0.12, 0.07, 0, -0.09, 0.02, gripMat);
-    box(0.02, 0.03, 0.02, 0, 0.055, -0.2, darkMat);
-    box(0.02, 0.02, 0.06, 0, 0.02, -0.24, brassMat);
-  } else if (def.id === 'smg') {
-    box(0.08, 0.09, 0.4, 0, 0, -0.08, bodyMat);
-    box(0.045, 0.045, 0.34, 0, 0.02, -0.42, gripMat);
-    box(0.06, 0.16, 0.06, 0, -0.12, -0.02, gripMat);
-    box(0.07, 0.07, 0.18, 0, -0.01, 0.24, gripMat);
-    box(0.02, 0.05, 0.02, 0, 0.07, -0.14, brassMat);
-  } else if (def.id === 'rifle') {
-    box(0.09, 0.1, 0.44, 0, 0, -0.08, bodyMat);
-    box(0.045, 0.045, 0.42, 0, 0.025, -0.46, gripMat);
-    box(0.075, 0.08, 0.22, 0, -0.02, 0.28, gripMat);
-    box(0.05, 0.05, 0.1, 0, -0.11, 0.02, gripMat);
-    box(0.02, 0.06, 0.02, 0, 0.08, -0.12, darkMat);
-    box(0.03, 0.04, 0.12, 0, 0.09, -0.3, darkMat);
-  } else if (def.id === 'shotgun') {
-    box(0.1, 0.11, 0.5, 0, 0, -0.06, darkMat);
-    box(0.07, 0.08, 0.3, 0, -0.03, -0.42, gripMat);
-    box(0.06, 0.1, 0.06, 0, -0.12, -0.04, gripMat);
-    box(0.08, 0.09, 0.24, 0, -0.02, 0.26, gripMat);
-    box(0.05, 0.05, 0.08, 0, 0.085, -0.2, brassMat);
-    box(0.02, 0.02, 0.3, 0.02, 0.07, -0.3, brassMat);
-  } else {
-    box(0.09, 0.11, 0.55, 0, 0, -0.1, darkMat);
-    box(0.05, 0.05, 0.5, 0, 0.03, -0.55, gripMat);
-    box(0.07, 0.07, 0.1, 0, 0.09, -0.18, bodyMat);
-    box(0.06, 0.14, 0.06, 0, -0.12, 0.06, gripMat);
-    box(0.075, 0.08, 0.24, 0, -0.02, 0.3, gripMat);
-    box(0.04, 0.04, 0.14, 0, 0.1, -0.42, darkMat);
-  }
-  return group;
-}
-
 function buildUtilModel() {
   const group = new THREE.Group();
   const ball = new THREE.Mesh(
@@ -98,10 +50,10 @@ function buildUtilModel() {
   return { group, ball };
 }
 
-export function createWeapon(camera, audio) {
+export function createWeapon(camera, audio, look = {}) {
   const models = {};
   for (const id of WEAPON_ORDER) {
-    const model = buildViewModel(WEAPONS[id]);
+    const model = look.buildGun(WEAPONS[id]);
     model.position.set(0.24, -0.2, -0.42);
     model.visible = false;
     camera.add(model);
@@ -117,19 +69,48 @@ export function createWeapon(camera, audio) {
   flashCanvas.height = 64;
   {
     const ctx = flashCanvas.getContext('2d');
-    const grad = ctx.createRadialGradient(32, 32, 2, 32, 32, 30);
-    grad.addColorStop(0, 'rgba(255, 220, 140, 1)');
-    grad.addColorStop(0.4, 'rgba(245, 168, 48, 0.85)');
+    const cx = 32;
+    const cy = 32;
+    const spike = (angle, len, wid) => {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(angle);
+      const grad = ctx.createLinearGradient(0, 0, len, 0);
+      grad.addColorStop(0, 'rgba(255, 230, 160, 0.95)');
+      grad.addColorStop(0.6, 'rgba(245, 168, 48, 0.7)');
+      grad.addColorStop(1, 'rgba(245, 168, 48, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(0, -wid);
+      ctx.lineTo(len, 0);
+      ctx.lineTo(0, wid);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    };
+    spike(0, 30, 5);
+    spike(Math.PI, 30, 5);
+    spike(Math.PI / 2, 26, 5);
+    spike(-Math.PI / 2, 26, 5);
+    spike(Math.PI / 4, 18, 3.5);
+    spike(-Math.PI / 4, 18, 3.5);
+    spike((3 * Math.PI) / 4, 18, 3.5);
+    spike((-3 * Math.PI) / 4, 18, 3.5);
+    const grad = ctx.createRadialGradient(cx, cy, 1, cx, cy, 14);
+    grad.addColorStop(0, 'rgba(255, 245, 210, 1)');
+    grad.addColorStop(0.5, 'rgba(255, 200, 90, 0.9)');
     grad.addColorStop(1, 'rgba(245, 168, 48, 0)');
     ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 64, 64);
+    ctx.beginPath();
+    ctx.arc(cx, cy, 14, 0, 7);
+    ctx.fill();
   }
   const flash = new THREE.Sprite(new THREE.SpriteMaterial({
     map: new THREE.CanvasTexture(flashCanvas), transparent: true, opacity: 0.9,
     depthWrite: false, blending: THREE.AdditiveBlending,
   }));
   flash.position.set(0.24, -0.16, -0.95);
-  flash.scale.set(0.34, 0.34, 1);
+  flash.scale.set(0.44, 0.44, 1);
   flash.visible = false;
   camera.add(flash);
   const flashLight = new THREE.PointLight(new THREE.Color(PALETTE.accent), 0, 6);
@@ -227,8 +208,12 @@ export function createWeapon(camera, audio) {
       model.rotation.y = 0;
       model.rotation.x = state.kick * 2.2;
     }
+    model.rotation.z = Math.sin(state.bobPhase * 0.5) * 0.008;
     util.group.position.z = -0.4 + state.kick;
     util.group.rotation.x = state.kick * 2;
+    const muzzleZ = (look.muzzle && look.muzzle[state.current]) || -0.95;
+    flash.position.z = muzzleZ;
+    flashLight.position.z = muzzleZ + 0.35;
     flash.visible = state.flash > 0;
     flash.material.opacity = state.flash > 0 ? 0.9 : 0;
     flashLight.intensity = state.flash > 0 ? 12 : 0;
@@ -266,7 +251,7 @@ export function createWeapon(camera, audio) {
     },
     pullTrigger() {
       state.cooldown = currentDef().gap;
-      state.flash = 0.06;
+      state.flash = 0.12;
       state.kick = 0.055 + currentDef().recoil * 0.6;
       audio?.shot(state.current);
     },

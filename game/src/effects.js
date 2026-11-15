@@ -6,7 +6,7 @@ const SPARK_SETS = 10;
 const SPARKS_EACH = 14;
 const PUFFS = 8;
 const CASINGS = 12;
-const TRACER_LIFE = 0.09;
+const TRACER_LIFE = 0.3;
 const SPARK_LIFE = 0.35;
 
 function softTexture(inner, mid) {
@@ -33,7 +33,17 @@ export function createEffects(scene) {
     line.visible = false;
     line.frustumCulled = false;
     scene.add(line);
-    return { line, life: 0 };
+    const beam = new THREE.Mesh(
+      new THREE.BoxGeometry(0.035, 0.035, 1),
+      new THREE.MeshBasicMaterial({
+        color: 0xffe0b0, transparent: true, opacity: 0,
+        blending: THREE.AdditiveBlending, depthWrite: false,
+      }),
+    );
+    beam.visible = false;
+    beam.frustumCulled = false;
+    scene.add(beam);
+    return { line, beam, life: 0 };
   });
   let tracerCursor = 0;
 
@@ -61,7 +71,7 @@ export function createEffects(scene) {
   });
   let puffCursor = 0;
 
-  const casingGeo = new THREE.BoxGeometry(0.02, 0.02, 0.045);
+  const casingGeo = new THREE.BoxGeometry(0.024, 0.024, 0.05);
   const brassMat = new THREE.MeshStandardMaterial({ color: new THREE.Color('#c9971f'), roughness: 0.35, metalness: 0.7 });
   const casingSlots = Array.from({ length: CASINGS }, () => {
     const mesh = new THREE.Mesh(casingGeo, brassMat);
@@ -91,6 +101,11 @@ export function createEffects(scene) {
     slot.line.visible = true;
     slot.life = TRACER_LIFE;
     slot.line.material.opacity = 0.85;
+    slot.beam.position.copy(from).add(to).multiplyScalar(0.5);
+    slot.beam.lookAt(to);
+    slot.beam.scale.set(1, 1, from.distanceTo(to));
+    slot.beam.visible = true;
+    slot.beam.material.opacity = 0.9;
   }
 
   function burst(point, color = 0xffc46b, speed = 3.2) {
@@ -150,8 +165,10 @@ export function createEffects(scene) {
     for (const slot of tracerSlots) {
       if (slot.life <= 0) continue;
       slot.life -= dt;
-      slot.line.material.opacity = Math.max(0, slot.life / TRACER_LIFE) * 0.85;
-      if (slot.life <= 0) slot.line.visible = false;
+      const k = Math.max(0, slot.life / TRACER_LIFE);
+      slot.line.material.opacity = k * 0.85;
+      slot.beam.material.opacity = k * 0.9;
+      if (slot.life <= 0) { slot.line.visible = false; slot.beam.visible = false; }
     }
     for (const slot of sparkSlots) {
       if (slot.life <= 0) continue;

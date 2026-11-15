@@ -14,6 +14,13 @@ import { createAudio } from './audio.js';
 import { createHud } from './hud.js';
 import { createAmbient } from './ambient.js';
 import { createInput } from './input.js';
+import { buildSkin } from './skin.js';
+import { dressYard } from './props.js';
+import { buildGun, GUN_MUZZLE } from './guns.js';
+import { dressBot } from './figures.js';
+import { createLife } from './life.js';
+import { createMarks } from './marks.js';
+import { dressV2 } from './v2.js';
 
 const STEP = 1 / 60; // fixed simulation step
 const PLANT_TIME = 3.5; // seconds of holding E inside a site
@@ -72,14 +79,18 @@ scene.add(camera);
 
 const audio = createAudio();
 audio.setVolume(settings.volume);
-const world = createWorld(scene);
+const skin = buildSkin();
+const world = createWorld(scene, { skin, dressYard });
 const effects = createEffects(scene);
+const life = createLife(scene);
+const marks = createMarks(scene);
+dressV2(scene);
 const hud = createHud(document);
 const scoreboard = hud.scoreboard;
 const minimap = hud.minimap;
 const ambient = createAmbient(scene, world.anchors);
 const player = createPlayer(world.colliders);
-const weapon = createWeapon(camera, audio);
+const weapon = createWeapon(camera, audio, { buildGun, muzzle: GUN_MUZZLE });
 const input = createInput(renderer.domElement, onPointerLock);
 const hearing = createHearing();
 const raycaster = new THREE.Raycaster();
@@ -247,6 +258,7 @@ const bots = createBots(scene, world, effects, audio, {
     hud.feed(`${bot.name} threw a ${kind === 'frag' ? 'frag' : kind}`, false);
   },
   radio: onRadio,
+  dressBot,
   onBotDown(bot, attacker) {
     const killer = attacker && attacker.kind === 'player' ? YOU : attacker;
     const firstBlood = scoreboard.recordKill(killer, bot);
@@ -351,6 +363,7 @@ function respawnEveryone() {
   match.flashUntil = -99;
   weapon.refill();
   utility.reset();
+  marks.reset();
   const attackPlan = plans.pickAttack(rounds.state.round, rounds.state.lastSite, rng);
   const defendPlan = plans.pickDefend(rounds.state.round, rounds.state.lastSite, rng);
   bots.setPlan({ slots: [...attackPlan.slots, ...defendPlan.slots] }, rng);
@@ -526,6 +539,9 @@ function shoot() {
         effects.burst(hit.point, 0xff5a3c, 2.4);
       } else {
         effects.burst(hit.point, 0xffd9a0, 1.6);
+        if (hit.face) {
+          marks.add(hit.point, new THREE.Vector3().copy(hit.face.normal).transformDirection(hit.object.matrixWorld));
+        }
       }
     }
   }
@@ -535,6 +551,8 @@ function shoot() {
   effects.eject(muzzleWorld().clone(), right);
   if (def.id === 'shotgun' || def.id === 'dmr') {
     effects.puff(muzzleWorld().clone(), 0.5, 0.6);
+  } else if (def.id === 'rifle' || def.id === 'smg') {
+    effects.puff(muzzleWorld().clone(), 0.3, 0.4);
   }
   player.recoil(def.recoil * (0.9 + rng() * 0.25), (rng() * 2 - 1) * def.recoil * 0.3);
   hearing.emit(body.position.x, body.position.z, 'shot');
@@ -729,6 +747,7 @@ function step(dt) {
   }
 
   ambient.step(dt);
+  life.step(dt);
   hud.step(dt);
   paintMinimap();
 
@@ -795,7 +814,7 @@ function runShot(name) {
   hud.hideOverlay();
   rounds.startMatch();
   if (name === 'start') {
-    player.teleport(0, 15.5, 0);
+    player.teleport(0, 12, 0);
     settle(10);
     aimAt(new THREE.Vector3(0, 1.6, -4));
     hud.showOverlay();
@@ -809,7 +828,9 @@ function runShot(name) {
     player.teleport(0, 10, 0);
     settle(10);
     const enemy = bots.bots.find((b) => b.team === 'defend');
-    placeBot(enemy, 0, 0, Math.PI);
+    placeBot(enemy, 0, 4, Math.PI);
+    const flank = bots.bots.filter((b) => b.team === 'defend')[1];
+    if (flank) placeBot(flank, -4, 3, Math.PI * 0.15);
     const mate = bots.bots.find((b) => b.team === 'attack');
     placeBot(mate, 4.5, 3, Math.PI * 0.75);
     rounds.state.phase = 'live';
@@ -819,15 +840,17 @@ function runShot(name) {
     weapon.state.utilCount = { frag: 1, flash: 1, smoke: 1 };
     weapon.state.armor = 50;
     syncAmmoHud();
-    settle(30);
+    settle(20);
     for (let shot = 0; shot < 3; shot += 1) {
       aimAt(new THREE.Vector3(enemy.pos.x, 1.15, enemy.pos.z));
       shoot();
       settle(8);
     }
-    settle(2);
+    settle(10);
+    weapon.state.flash = 0.12;
+    settle(1);
   } else if (name === 'buy') {
-    player.teleport(0, 15.5, 0);
+    player.teleport(0, 12, 0);
     settle(10);
     aimAt(new THREE.Vector3(0, 1.6, -4));
     rounds.state.money = 4700;
@@ -858,6 +881,7 @@ function runShot(name) {
   hud.setHealth(match.health);
   hud.setScore(rounds.state.wins.attack, rounds.state.wins.defend);
   hud.setTimer(rounds.timerText(), Boolean(rounds.state.planted));
+  match.frozen = true;
   paintTwiceThenReady();
 }
 
