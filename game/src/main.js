@@ -21,6 +21,7 @@ import { dressBot } from './figures.js';
 import { createLife } from './life.js';
 import { createMarks } from './marks.js';
 import { dressV2 } from './v2.js';
+import { dressV3 } from './v3.js';
 
 const STEP = 1 / 60; // fixed simulation step
 const PLANT_TIME = 3.5; // seconds of holding E inside a site
@@ -85,6 +86,7 @@ const effects = createEffects(scene);
 const life = createLife(scene);
 const marks = createMarks(scene);
 dressV2(scene);
+dressV3(scene);
 const hud = createHud(document);
 const scoreboard = hud.scoreboard;
 const minimap = hud.minimap;
@@ -553,6 +555,8 @@ function shoot() {
     effects.puff(muzzleWorld().clone(), 0.5, 0.6);
   } else if (def.id === 'rifle' || def.id === 'smg') {
     effects.puff(muzzleWorld().clone(), 0.3, 0.4);
+  } else {
+    effects.puff(muzzleWorld().clone(), 0.22, 0.35);
   }
   player.recoil(def.recoil * (0.9 + rng() * 0.25), (rng() * 2 - 1) * def.recoil * 0.3);
   hearing.emit(body.position.x, body.position.z, 'shot');

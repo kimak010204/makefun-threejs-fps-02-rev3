@@ -3,6 +3,7 @@
 // serial plate, grip tape and a sling where it fits. Stats untouched —
 // this file only builds meshes. Muzzle z is in camera space for the flash.
 import * as THREE from 'three';
+import { attachHands } from './hands.js';
 
 export const GUN_MUZZLE = { pistol: -0.74, smg: -1.06, rifle: -1.16, shotgun: -1.16, dmr: -1.36 };
 
@@ -26,6 +27,7 @@ export function buildGun(def) {
   const tape = new THREE.MeshStandardMaterial({ color: new THREE.Color('#4a4a30'), roughness: 0.95, metalness: 0 });
   const glass = new THREE.MeshStandardMaterial({ color: new THREE.Color('#0e1a2a'), roughness: 0.08, metalness: 0.9 });
   const red = new THREE.MeshStandardMaterial({ color: new THREE.Color('#ff2e1f'), emissive: new THREE.Color('#ff2e1f'), emissiveIntensity: 1.6, roughness: 0.4 });
+  const shellRed = new THREE.MeshStandardMaterial({ color: new THREE.Color('#a83226'), roughness: 0.5, metalness: 0.2 });
   const grp = new THREE.Group();
   const bx = (w, h, d, x, y, z, m, rx = 0, rz = 0) => {
     const q = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
@@ -58,6 +60,10 @@ export function buildGun(def) {
     bx(0.052, 0.02, 0.067, 0, -0.06, 0.028, tape, 0.16); // grip tape
     bx(0.052, 0.014, 0.07, 0, -0.145, 0.032, metal, 0.16); // mag base
     bx(0.05, 0.012, 0.1, 0, -0.045, -0.06, steel); // trigger guard
+    bx(0.008, 0.03, 0.012, 0, -0.048, -0.045, poly); // trigger
+    bx(0.012, 0.02, 0.02, 0, 0.048, 0.1, steel); // hammer
+    bx(0.004, 0.02, 0.08, 0.029, 0.02, -0.12, poly); // ejection port, right
+    bx(0.05, 0.08, 0.012, 0, -0.085, -0.014, tape, 0.16); // front strap
     plate('P9 · SN 0117', -0.029, 0.01, -0.1);
   } else if (def.id === 'smg') {
     bx(0.075, 0.085, 0.36, 0, 0, -0.1, metal); // receiver
@@ -72,6 +78,9 @@ export function buildGun(def) {
     bx(0.012, 0.012, 0.012, 0, -0.045, -0.45, red); // laser dot
     bx(0.014, 0.03, 0.014, 0, 0.062, -0.05, steel); // rear sight
     bx(0.052, 0.02, 0.06, 0, -0.075, 0.1, tape); // grip tape
+    bx(0.02, 0.015, 0.04, 0.04, 0.02, -0.05, steel); // charging handle
+    bx(0.006, 0.03, 0.1, -0.041, 0.01, -0.12, poly); // side rail
+    for (let i = 0; i < 3; i += 1) bx(0.004, 0.014, 0.02, -0.024, -0.08 - i * 0.04, -0.02, brass); // mag window, brass
     plate('RPTR · SN 2204', -0.039, 0, -0.08);
   } else if (def.id === 'rifle') {
     bx(0.085, 0.1, 0.4, 0, 0, -0.08, metal); // receiver
@@ -99,6 +108,10 @@ export function buildGun(def) {
     bx(0.087, 0.015, 0.34, 0, 0.055, -0.08, steel); // dust cover
     bx(0.05, 0.05, 0.08, 0, -0.1, 0.06, poly); // pistol grip
     bx(0.052, 0.02, 0.08, 0, -0.085, 0.06, tape); // grip tape
+    bx(0.03, 0.015, 0.02, 0.048, 0.02, 0.05, steel); // charging handle
+    bx(0.004, 0.025, 0.07, 0.044, 0.0, -0.1, poly); // ejection port, right
+    bx(0.02, 0.008, 0.008, 0.05, 0.0, -0.1, brass); // brass case in port
+    for (let i = 0; i < 3; i += 1) bx(0.072, 0.006, 0.05, 0, 0.042, -0.32 - i * 0.1, poly); // handguard vents
     sling(0.03, -0.06, 0.03, -0.5);
     plate('VK-47 · SN 8841', -0.044, 0.01, -0.06);
   } else if (def.id === 'shotgun') {
@@ -112,6 +125,10 @@ export function buildGun(def) {
     bx(0.08, 0.11, 0.02, 0, -0.045, 0.37, poly, -0.1); // butt pad
     bx(0.05, 0.05, 0.07, 0, -0.11, -0.02, poly); // grip
     tub(0.02, 0.02, 0.05, 0.03, 0.03, -0.6, brass, 8); // shell in tube
+    for (let i = 0; i < 4; i += 1) tub(0.012, 0.012, 0.05, -0.056, 0.02, -0.02 - i * 0.06, shellRed, 10); // side saddle shells
+    bx(0.07, 0.01, 0.34, 0, 0.055, -0.48, steel); // heat shield
+    bx(0.02, 0.01, 0.03, 0, -0.058, -0.12, brass); // shell rim, loading port
+    bx(0.02, 0.01, 0.03, 0, -0.058, -0.18, brass); // shell rim, loading port
     plate('SCRP-12 · SN 0550', -0.051, 0.01, -0.04);
   } else {
     bx(0.085, 0.11, 0.52, 0, 0, -0.1, metal); // long receiver
@@ -131,8 +148,17 @@ export function buildGun(def) {
     bx(0.02, 0.09, 0.02, -0.02, -0.06, -0.5, steel, 0.5); // bipod leg L (folded)
     bx(0.02, 0.09, 0.02, 0.02, -0.06, -0.5, steel, -0.5); // bipod leg R (folded)
     bx(0.05, 0.05, 0.08, 0, -0.1, 0.06, poly); // grip
+    tub(0.012, 0.012, 0.02, 0, 0.135, -0.18, steel, 10, 0); // scope turret, top
+    tub(0.012, 0.012, 0.02, 0.042, 0.1, -0.18, steel, 10, 0, Math.PI / 2); // scope turret, side
+    bx(0.05, 0.002, 0.001, 0, 0.1, -0.302, poly); // reticle, horizontal
+    bx(0.002, 0.05, 0.001, 0, 0.1, -0.302, poly); // reticle, vertical
+    tub(0.008, 0.008, 0.05, 0.06, -0.01, -0.05, steel, 8, 0, -2.2); // bolt handle
+    { const knob = new THREE.Mesh(new THREE.SphereGeometry(0.013, 8, 6), steel); knob.position.set(0.075, -0.02, -0.05); grp.add(knob); }
+    tub(0.007, 0.007, 0.025, 0.012, -0.055, -0.02, brass, 8, 0); // cartridge tip in mag
+    tub(0.007, 0.007, 0.025, -0.012, -0.055, -0.02, brass, 8, 0); // cartridge tip in mag
     sling(0.03, -0.06, 0.03, -0.52);
     plate('LGSHOT · SN 9902', -0.044, 0.01, -0.06);
   }
+  attachHands(grp, def);
   return grp;
 }
