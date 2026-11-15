@@ -27,12 +27,13 @@
   #crosshair i:nth-child(4) { top: -1px; left: calc(2px + var(--gap)); height: 2px; width: 9px; }
   #hitmarker { position: absolute; left: 50%; top: 50%; width: 0; height: 0; opacity: 0; }
   #hitmarker.on { opacity: 1; }
-  #hitmarker i { position: absolute; width: 2px; height: 11px; background: #fff; box-shadow: 0 0 4px rgba(0,0,0,.9); }
-  #hitmarker i:nth-child(1) { transform: translate(-9px, -9px) rotate(45deg); }
-  #hitmarker i:nth-child(2) { transform: translate(7px, -9px) rotate(-45deg); }
-  #hitmarker i:nth-child(3) { transform: translate(-9px, 7px) rotate(-45deg); }
-  #hitmarker i:nth-child(4) { transform: translate(7px, 7px) rotate(45deg); }
-  #hitmarker.kill i { background: var(--danger); }
+  #hitmarker i { position: absolute; width: 3px; height: 14px; background: #fff; box-shadow: 0 0 5px rgba(0,0,0,.95), 0 0 2px rgba(255,255,255,.8); }
+  #hitmarker i:nth-child(1) { transform: translate(-11px, -11px) rotate(45deg); }
+  #hitmarker i:nth-child(2) { transform: translate(8px, -11px) rotate(-45deg); }
+  #hitmarker i:nth-child(3) { transform: translate(-11px, 8px) rotate(-45deg); }
+  #hitmarker i:nth-child(4) { transform: translate(8px, 8px) rotate(45deg); }
+  #hitmarker.kill i { background: var(--danger); box-shadow: 0 0 6px rgba(226,59,46,.9); }
+  #hitmarker.kill { transform: scale(1.25); }
   #damage-arc {
     --arc-rot: 0deg; position: absolute; left: 50%; top: 50%; width: 220px; height: 220px;
     margin: -110px 0 0 -110px; border-radius: 50%; opacity: 0;
@@ -45,10 +46,10 @@
   #damage-layer { position: absolute; inset: 0; overflow: hidden; }
   .dmg-num {
     position: absolute; transform: translate(-50%, -50%);
-    font-family: var(--font-readout); font-size: 17px; font-weight: 700; color: #fff;
-    text-shadow: 0 1px 3px rgba(0,0,0,.9); pointer-events: none;
+    font-family: var(--font-readout); font-size: 21px; font-weight: 800; color: #fff;
+    text-shadow: 0 0 4px rgba(0,0,0,1), 0 2px 4px rgba(0,0,0,.9); pointer-events: none;
   }
-  .dmg-num.head { color: var(--accent); font-size: 22px; }
+  .dmg-num.head { color: var(--accent); font-size: 27px; }
   #minimap { position: absolute; top: 14px; left: 16px; width: 180px; height: 180px; background: rgba(16, 18, 24, .72); border: 1px solid var(--hairline); }
   #minimap-label { position: absolute; top: 198px; left: 16px; font-family: var(--font-readout); font-size: 10px; letter-spacing: 2px; color: var(--muted); }
   #radio-log {
@@ -103,9 +104,13 @@
   .util-slot.sel { border-color: var(--accent); color: var(--accent); }
   .util-slot b { color: var(--ink); }
   .util-slot.sel b { color: var(--accent); }
-  #banner { position: absolute; top: 22%; left: 50%; transform: translateX(-50%); text-align: center; text-shadow: 0 2px 12px rgba(0,0,0,.8); }
-  #banner-title { font-size: 38px; font-weight: 800; letter-spacing: 4px; }
-  #banner-sub { font-size: 15px; color: var(--muted); margin-top: 4px; letter-spacing: 1px; }
+  #banner { position: absolute; top: 20%; left: 50%; transform: translateX(-50%); text-align: center; background: rgba(8, 10, 14, .85); border: 1px solid var(--hairline); border-top: 4px solid var(--accent); padding: 18px 40px 16px; box-shadow: 0 10px 36px rgba(0,0,0,.7); }
+  #banner-title { font-size: 52px; font-weight: 900; letter-spacing: 5px; line-height: 1.05; color: #fff; text-shadow: 0 2px 0 #000, 0 -2px 0 #000, 2px 0 0 #000, -2px 0 0 #000, 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 4px 18px rgba(0,0,0,.95); }
+  #banner-sub { font-size: 25px; color: var(--ink); margin-top: 12px; letter-spacing: 1.5px; font-weight: 800; text-shadow: 0 2px 0 #000, 0 -2px 0 #000, 2px 0 0 #000, -2px 0 0 #000, 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 3px 14px rgba(0,0,0,.95); }
+  #banner.win-van { border-top-color: var(--vanguard); }
+  #banner.win-van #banner-title { color: var(--vanguard); }
+  #banner.win-emb { border-top-color: var(--ember); }
+  #banner.win-emb #banner-title { color: var(--ember); }
   #hint { position: absolute; bottom: 108px; left: 50%; transform: translateX(-50%); font-family: var(--font-readout); font-size: 14px; letter-spacing: 1px; background: rgba(16, 18, 24, .72); border: 1px solid var(--hairline); padding: 7px 14px; }
   #spectate-bar { position: absolute; bottom: 148px; left: 50%; transform: translateX(-50%); font-family: var(--font-readout); font-size: 13px; letter-spacing: 1px; background: rgba(16, 18, 24, .8); border: 1px solid var(--vanguard); padding: 7px 14px; color: var(--vanguard); }
   #plant-bar { position: absolute; bottom: 148px; left: 50%; transform: translateX(-50%); width: 300px; text-align: center; }
